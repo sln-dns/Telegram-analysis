@@ -157,3 +157,138 @@ def heat_map():
     # Show the plot
     plt.title('Most Active Day/Time of Day for Sending Messages')
     return fig
+
+
+def week_growth():
+
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+
+   # Query to group users by week and count the number of users for each group
+    query = '''
+    SELECT strftime('%Y-%W', date) as week, count(distinct user_id) as count
+    FROM messages
+    GROUP BY week
+    '''
+
+    cursor.execute(query)
+    results = cursor.fetchall()
+    # Convert the results to a pandas dataframe
+    df = pd.DataFrame(results, columns=['week', 'count'])
+
+    # Plot the graph
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(df['week'], df['count'], marker='o', markersize=8, color='orange')
+    ax.set_xticks(ax.get_xticks()[::2])
+    ax.set_xlabel('Week')
+    ax.set_ylabel('Number of Users')
+    ax.set_title('Weekly Growth of Users')
+    ax.grid(True)      
+
+    # Rotate the x-axis tick labels for better visibility
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    conn.close()
+    return fig
+
+
+def weekly_messages():
+
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+
+
+    # Query to group messages by week and count the number of messages for each group
+    query = '''
+    SELECT strftime('%Y-%W', date) as week, count(*) as count
+    FROM messages
+    GROUP BY week
+    '''
+
+    # Execute the query and fetch the results
+    cursor.execute(query)
+    results = cursor.fetchall()
+
+    # Convert the results to a pandas dataframe
+    df = pd.DataFrame(results, columns=['week', 'count'])
+
+    # Set the figure size and font size
+    plt.rcParams["figure.figsize"] = (10, 5)
+    plt.rcParams.update({'font.size': 12})
+
+    # Create a bar chart with a colormap
+    fig, ax = plt.subplots()
+    im = ax.bar(df['week'], df['count'], color=plt.cm.YlOrRd(df['count']/max(df['count'])))
+
+    # Set the axis labels and title
+    ax.set_xticks(ax.get_xticks()[::2])
+    ax.set_xlabel('Week')
+    ax.set_ylabel('Number of Messages')
+    ax.set_title('Weekly Messages')
+
+    # Set the x-axis tick labels rotation and alignment
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    
+
+    # Add data labels to the bars
+    for i in im:
+        height = i.get_height()
+        ax.annotate('{}'.format(height),
+                    xy=(i.get_x() + i.get_width() / 2, height),
+                    xytext=(0, 3), 
+                    textcoords="offset points",
+                    ha='center', va='bottom', color='black', rotation = 90)
+
+    # Show the plot
+    conn.close()
+    return fig
+
+
+def weekly_metrics():
+
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+
+
+    # Query to group users by week and count the number of users for each group
+    query_users = '''
+    SELECT strftime('%Y-%W', date) as week, count(distinct user_id) as users
+    FROM messages
+    GROUP BY week
+    '''
+
+    # Query to group messages by week and count the number of messages for each group
+    query_messages = '''
+    SELECT strftime('%Y-%W', date) as week, count(*) as messages
+    FROM messages
+    GROUP BY week
+    '''
+    # Execute the queries and fetch the results
+    cursor.execute(query_users)
+    results_users = cursor.fetchall()
+    cursor.execute(query_messages)
+    results_messages = cursor.fetchall()
+
+    # Convert the results to pandas dataframes
+    df_users = pd.DataFrame(results_users, columns=['week', 'users'])
+    df_messages = pd.DataFrame(results_messages, columns=['week', 'messages'])
+
+    # Merge the dataframes on week
+    df_combined = pd.merge(df_users, df_messages, on='week')
+
+    # Set the week column as the index
+    df_combined.set_index('week', inplace=True)
+
+    # Plot the graph
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.stackplot(df_combined.index, df_combined['users'], df_combined['messages'], labels=['Users', 'Messages'], colors=['#FFE07F', '#FFBB4A'])
+    ax.set_xticks(ax.get_xticks()[::2])
+    ax.set_xlabel('Week')
+    ax.set_ylabel('Count')
+    ax.set_title('Weekly Metrics')
+    ax.legend(loc='upper left')
+
+    # Rotate the x-axis tick labels for better visibility
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    conn.close()
+    return fig
