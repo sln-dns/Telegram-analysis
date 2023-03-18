@@ -5,138 +5,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from calculations import total_messages, total_users, active_users, last_activity, heat_map
 
 conn = sqlite3.connect('data.sqlite')
 cursor = conn.cursor()
 
-#Total messages
-def total_messages():
-    
-    query = '''
-        SELECT COUNT(*) 
-        FROM messages
-        '''
-    cursor.execute(query)
-    results = cursor.fetchall()
-    return  results[0][0]
 
-total_messages = str(total_messages())
 
-def total_users():
-    
-    query = '''
-        SELECT COUNT(*) 
-        FROM users
-        '''
 
-# Execute the query and fetch the results
-    cursor.execute(query)
-    results = cursor.fetchall()
-
-# Print the results
-    return results[0][0]
-
-total_users = str(total_users())
-
-def active_users(number_of_days):
-
-    # calculate the date range for the last week
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=number_of_days)
-
-    # convert the date objects to string format
-    start_date_str = start_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
-
-    # query to get the number of users who sent messages in the last week
-    query = """
-    SELECT COUNT(DISTINCT user_id)
-    FROM messages
-    WHERE date BETWEEN ? AND ?
-    """
-
-    # execute the query with the date range parameters
-    cursor.execute(query, (start_date_str, end_date_str))
-
-    # fetch the result and print the number of users
-    num_users = cursor.fetchone()[0]
-    return num_users
-
-number_of_active_users = str(active_users(10))
-
-def last_activity(days):
-    # calculate the date range for the last 'days'
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-
-    # query to get the number of messages sent in the last 'days'
-    query = """
-    SELECT COUNT(*)
-    FROM messages
-    WHERE date BETWEEN ? AND ?
-    """
-
-    cursor.execute(query, (start_date, end_date))
-
-    # fetch the result and return the number of messages
-    num_messages = cursor.fetchone()[0]
-    return num_messages
-
-number_of_messages = str(last_activity(10))
-
-def heat_map():
-    # Query to group messages by day and hour and count the number of messages for each group
-    query = '''
-    SELECT strftime('%w', date) as day, strftime('%H', date) as hour, count(*) as count
-    FROM messages
-    GROUP BY day, hour
-    '''
-
-    # Execute the query and fetch the results
-    cursor.execute(query)
-    results = cursor.fetchall()
-
-    # Convert the results to a pandas dataframe
-    df = pd.DataFrame(results, columns=['day', 'hour', 'count'])
-
-    # Pivot the dataframe to create a heatmap
-    df_pivot = df.pivot(index='day', columns='hour', values='count')
-
-    # Plot the heatmap
-    fig = plt.figure(figsize=(10, 5))
-    ax = fig.add_subplot(111)
-    im = ax.imshow(df_pivot, cmap='YlOrRd')
-
-    # Add a colorbar
-    cbar = ax.figure.colorbar(im, ax=ax)
-
-    # Set the tick labels
-    days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    hours = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
-             '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23']
-    
-    ax.set_xticks(range(len(hours)))
-    ax.set_yticks(range(len(days)))
-    ax.set_xticklabels(hours)
-    ax.set_yticklabels(days)
-    ax.set_xticks(ax.get_xticks()[::2]
-                  )
-    # Rotate the tick labels and set the axis labels
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
-    ax.set_xlabel('Hour of Day')
-    ax.set_ylabel('Day of Week')
-    cbar.ax.set_ylabel('Number of Messages')
-
-    # Add the count values as text annotations in each cell
-    for i in range(len(days)):
-        for j in range(len(hours)):
-            text = ax.text(j, i, df_pivot.iloc[i, j],
-                           ha="center", va="center", color="w", fontsize = 8)
-
-    # Show the plot
-    plt.title('Most Active Day/Time of Day for Sending Messages')
-    return fig
     
 def week_growth():
    # Query to group users by week and count the number of users for each group
@@ -269,7 +145,26 @@ def main():
 
     st.header('Telegram channel analysis')    
 
-        
+    # TODO make section with upload *.sqlite file and then use it to analysis
+    ## create a function to read the data from the uploaded file
+#def read_uploaded_data(uploaded_file):
+    #conn = sqlite3.connect('file:{}?mode=ro'.format(uploaded_file.name), uri=True)
+    #cursor = conn.cursor()
+    #cursor.execute('SELECT * FROM my_table')
+    #data = cursor.fetchall()
+    #conn.close()
+    #return data
+#
+## use the st.file_uploader function to upload the file
+#uploaded_file = st.file_uploader("Upload a SQLite file", type=".sqlite")
+#
+## check if a file has been uploaded
+#if uploaded_file is not None:
+    ## use the read_uploaded_data function to read the data from the uploaded file
+    #data = read_uploaded_data(uploaded_file)
+    ## display the data in a table
+#    st.table(data)    
+
     with st.container():
 
         col1, col2, col3, col4 = st.columns(4)
@@ -281,7 +176,7 @@ def main():
             iconname = ""
             sline = "Total messages"
             lnk = '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">'
-            i = total_messages
+            i = total_messages()
 
             htmlstr = f"""<p style='background-color: rgb({wch_colour_box[0]}, 
                                               {wch_colour_box[1]}, 
@@ -310,7 +205,7 @@ def main():
             iconname = ""
             sline = "Total users"
             lnk = '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">'
-            i = total_users
+            i = total_users()
 
             htmlstr = f"""<p style='background-color: rgb({wch_colour_box[0]}, 
                                               {wch_colour_box[1]}, 
@@ -339,7 +234,7 @@ def main():
             iconname = ""
             sline = "Active users last 7 days"
             lnk = '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">'
-            i = number_of_active_users
+            i = active_users(7)
 
             htmlstr = f"""<p style='background-color: rgb({wch_colour_box[0]}, 
                                               {wch_colour_box[1]}, 
@@ -368,7 +263,7 @@ def main():
             iconname = ""
             sline = "Messages for the last 10 days"
             lnk = '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">'
-            i = number_of_messages
+            i = last_activity(10)
 
             htmlstr = f"""<p style='background-color: rgb({wch_colour_box[0]}, 
                                               {wch_colour_box[1]}, 
